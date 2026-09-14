@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const purchaseId = crypto.randomUUID();
-    const siteUrl = getSiteUrl().replace(/\/$/, "");
+    const siteUrl = getSiteUrl();
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
