@@ -1,5 +1,6 @@
 import { ArrowRight, HeartHandshake, MessageCircleHeart, Sprout } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import { CourseCard } from "@/components/public/CourseCard";
 import { FAQAccordion } from "@/components/public/FAQAccordion";
@@ -29,8 +30,9 @@ export default async function Home() {
         <div className="hero-actions"><Button href="/cursos">Explorar cursos <ArrowRight size={17} /></Button><Button href="/nosotros" variant="secondary">Conoce Somos Proceso</Button></div>
       </Reveal>
       <Reveal className="hero-art" delay={.1}>
-        <div className="art-orbit" /><div className="art-leaf art-leaf-one" /><div className="art-leaf art-leaf-two" />
-        <p>Todo cambio<br />comienza con<br /><em>una pausa.</em></p>
+        <div className="art-orbit" aria-hidden="true" />
+        <Image className="hero-brand-mark" src="/logo.svg" alt="" width={1500} height={1500} loading="eager" sizes="(max-width: 800px) 80vw, 38vw" />
+        <p>Todo cambio comienza con <em>una pausa.</em></p>
       </Reveal>
     </section>
 

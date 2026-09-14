@@ -1,11 +1,13 @@
 import { Instagram } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { Logo } from "@/components/ui/Logo";
 
 export function Footer() {
   return (
     <footer className="footer">
+      <Image className="footer-brand-mark" src="/logo.svg" alt="" width={360} height={360} aria-hidden="true" />
       <div className="footer-top">
         <div><Logo light /><p>Desarrollo humano, psicoeducación y espacios seguros para crecer.</p></div>
         <div className="footer-links">
