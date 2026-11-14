@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db";
-import { courses } from "@/db/schema";
-import { isAdminAuthenticated } from "@/lib/auth";
-import { courseInputSchema } from "@/lib/validations/course";
-
-function dbValues(input: unknown) {
-  const parsed = courseInputSchema.parse(input);
-  const { price, ...values } = parsed;
-  return { ...values, priceCents: Math.round(price * 100), publishedAt: parsed.status === "published" ? new Date() : null, updatedAt: new Date() };
-}
+import { adminRequestError, apiErrorResponse } from "@/lib/admin-api";
+import { createCourse } from "@/lib/course-mutations";
+import { revalidateCourses } from "@/lib/revalidate";
 
 export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) return NextResponse.json({ error: "Sesión expirada." }, { status: 401 });
+  const denied = await adminRequestError(request);
+  if (denied) return denied;
   try {
-    const [course] = await getDb().insert(courses).values(dbValues(await request.json())).returning({ id: courses.id });
-    return NextResponse.json({ id: course.id, message: "Cambios guardados" }, { status: 201 });
+    const course = await createCourse(await request.json());
+    revalidateCourses();
+    return NextResponse.json({ id: course.id, message: "Curso creado" }, { status: 201 });
   } catch (error) {
-    const isDuplicate = typeof error === "object" && error !== null && "code" in error && error.code === "23505";
-    return NextResponse.json({ error: isDuplicate ? "Ya existe un curso con ese slug." : "Revisa los campos del curso." }, { status: 400 });
+    return apiErrorResponse(error);
   }
 }

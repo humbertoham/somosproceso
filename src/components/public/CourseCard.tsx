@@ -17,7 +17,7 @@ export function CourseCard({ course, sales = 0 }: { course: Course; sales?: numb
         <h3><Link href={`/cursos/${course.slug}`}>{course.title}</Link></h3>
         <p>{course.shortDescription}</p>
         <div className="course-meta">
-          {course.startDate && <span><CalendarDays size={15} aria-hidden="true" />{formatDate(course.startDate)}</span>}
+          {course.startDate && <span><CalendarDays size={15} aria-hidden="true" />{formatDate(course.startDate, false, course.timezone)}</span>}
           <span><Monitor size={15} aria-hidden="true" />{modalityLabel(course.modality)}</span>
         </div>
         <div className="course-card-footer"><strong>{formatPrice(course.priceCents, course.currency)}</strong><Link href={`/cursos/${course.slug}`}>Ver curso <ArrowUpRight size={16} /></Link></div>

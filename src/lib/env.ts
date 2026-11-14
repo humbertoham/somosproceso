@@ -6,10 +6,8 @@ const adminSchema = z.object({
   ADMIN_PASSWORD: z.string().min(10),
   ADMIN_SESSION_SECRET: z.string().min(32),
 });
-const stripeSchema = z.object({
-  STRIPE_SECRET_KEY: z.string().startsWith("sk_"),
-  STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_"),
-});
+const stripeSchema = z.object({ STRIPE_SECRET_KEY: z.string().startsWith("sk_") });
+const stripeWebhookSchema = z.object({ STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_") });
 const r2Schema = z.object({
   R2_ACCOUNT_ID: z.string().min(1),
   R2_ACCESS_KEY_ID: z.string().min(1),
@@ -28,6 +26,8 @@ export const hasDatabase = () => Boolean(process.env.DATABASE_URL);
 export const getDatabaseEnv = () => parseEnv(databaseSchema, "la base de datos");
 export const getAdminEnv = () => parseEnv(adminSchema, "la administración");
 export const getStripeEnv = () => parseEnv(stripeSchema, "Stripe");
+export const getStripeWebhookEnv = () => parseEnv(stripeWebhookSchema, "el webhook de Stripe");
+export const hasStripe = () => stripeSchema.safeParse(process.env).success && stripeWebhookSchema.safeParse(process.env).success;
 export const getR2Env = () => parseEnv(r2Schema, "Cloudflare R2");
 
 const localSiteUrl = "http://localhost:3000";

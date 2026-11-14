@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const courseStatusEnum = pgEnum("course_status", ["draft", "published", "archived"]);
@@ -19,7 +20,7 @@ export const courses = pgTable("courses", {
   startDate: timestamp("start_date", { withTimezone: true }),
   endDate: timestamp("end_date", { withTimezone: true }),
   timeText: varchar("time_text", { length: 120 }),
-  timezone: varchar("timezone", { length: 80 }).notNull().default("America/Mexico_City"),
+  timezone: varchar("timezone", { length: 80 }).notNull().default("America/Monterrey"),
   durationText: varchar("duration_text", { length: 120 }),
   facilitators: text("facilitators"),
   targetAudience: text("target_audience"),
@@ -40,7 +41,7 @@ export const courses = pgTable("courses", {
 export const purchases = pgTable("purchases", {
   id: uuid("id").defaultRandom().primaryKey(),
   courseId: uuid("course_id").notNull().references(() => courses.id, { onDelete: "restrict" }),
-  stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }).notNull(),
+  stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }),
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   buyerName: varchar("buyer_name", { length: 180 }).notNull().default(""),
@@ -53,6 +54,8 @@ export const purchases = pgTable("purchases", {
   emailSent: boolean("email_sent").notNull().default(false),
   emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
   adminNotes: text("admin_notes"),
+  source: varchar("source", { length: 60 }),
+  internalReference: varchar("internal_reference", { length: 255 }),
   termsAcceptedAt: timestamp("terms_accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -71,3 +74,8 @@ export const stripeEvents = pgTable("stripe_events", {
   processedAt: timestamp("processed_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("stripe_events_event_id_idx").on(table.stripeEventId)]);
+
+export const coursesRelations = relations(courses, ({ many }) => ({ purchases: many(purchases) }));
+export const purchasesRelations = relations(purchases, ({ one }) => ({
+  course: one(courses, { fields: [purchases.courseId], references: [courses.id] }),
+}));

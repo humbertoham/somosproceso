@@ -1,101 +1,99 @@
-# Somos Proceso
+﻿# Somos Proceso
 
-Aplicación web para publicar y vender cursos/talleres. Incluye sitio público, Stripe Checkout, webhook idempotente, catálogo administrable, imágenes en Cloudflare R2 y seguimiento manual de compradores.
+Proyecto existente en Next.js App Router, React, Drizzle y PostgreSQL/Neon. Conserva el sitio público y añade administración de cursos y seguimiento manual de compradores. Las imágenes se guardan en Cloudflare R2 mediante el SDK S3. No hay cuentas de compradores ni envío automático de correos.
 
-## Requisitos
+## Configuración
 
-- Node.js 22 o posterior
-- Una base PostgreSQL en Neon
-- Una cuenta de Stripe y Stripe CLI para pruebas locales
-- Un bucket público de Cloudflare R2
+Requiere Node.js 22 o posterior. Instala con `npm install` y completa `.env.local` usando `.env.example` como referencia. Next.js y los scripts de Drizzle cargan `.env` y `.env.local`; los secretos no se incluyen en Git.
 
-No utiliza Docker.
+Variables necesarias para operar:
 
-## Instalación
+- `DATABASE_URL`: conexión a Neon con SSL.
+- `ADMIN_USER`, `ADMIN_PASSWORD` (mínimo 10 caracteres), `ADMIN_SESSION_SECRET` (mínimo 32 caracteres aleatorios).
+- `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`: credenciales y URL pública del bucket.
+- `NEXT_PUBLIC_SITE_URL`: URL del sitio, sin diagonal final.
 
-```bash
-npm install
-cp .env.example .env.local
-```
+Stripe es opcional. El sitio, admin, Neon y R2 funcionan con sus variables vacías. El checkout responde «Los pagos en línea estarán disponibles próximamente.» hasta configurar tanto la llave secreta como el webhook.
 
-Completa `.env.local`. Genera `ADMIN_SESSION_SECRET` con al menos 32 caracteres aleatorios. No uses credenciales reales en `.env.example` ni subas `.env.local` al repositorio.
-
-## Base de datos Neon
-
-1. Crea un proyecto y una base en Neon.
-2. Copia la connection string con SSL en `DATABASE_URL`.
-3. Genera y aplica el esquema:
+## Base de datos
 
 ```bash
 npm run db:generate
 npm run db:migrate
 ```
 
-Opcionalmente carga tres cursos identificados como demostración:
+La migración `0000` es la original y se conserva. `0001_rapid_risque.sql` cambia el valor predeterminado de zona horaria a `America/Monterrey`, permite compras sin sesión Stripe y añade `source` e `internalReference`. No borra tablas, columnas ni datos. Los índices existentes ya cubren curso, correo, fecha y estado de pago. La relación de compras restringe la eliminación de cursos con historial.
+
+Cupo disponible e ingresos se calculan desde compras `paid`. Las compras pendientes, fallidas, expiradas o reembolsadas no cuentan. No se guarda `remainingSeats`. Los precios se convierten de texto decimal a centavos enteros; la moneda del formulario es MXN.
+
+## Administración
+
+Entra en `/admin/login` y visita:
+
+- `/admin`: cuatro indicadores y las cinco últimas compras.
+- `/admin/cursos`: edición, publicación, archivo, duplicación y eliminación cuando no hay compras.
+- `/admin/cursos/nuevo` y `/admin/cursos/[id]`: formulario compartido, imagen, precio, fechas, horario, zona horaria y cupo.
+- `/admin/compras`: búsqueda por nombre/correo/teléfono y filtros por curso, pago y estado del correo.
+- `/admin/cursos/[id]/compradores`: resumen del curso y compradores, con los mismos filtros.
+
+«Enviar correo» abre Gmail con destinatario, asunto y detalles reales del curso, además de un espacio para pegar la liga o información adicional. El administrador lo edita y envía manualmente; abrir Gmail nunca cambia `emailSent`. El checkbox separado guarda o limpia `emailSentAt`. Las notas se guardan con «Guardar nota» y son privadas. WhatsApp solo aparece con prefijo internacional explícito.
+
+CSV respeta los filtros activos y el curso, incluye BOM UTF-8 para Excel y protege las celdas contra fórmulas. Páginas, consultas privadas y endpoints comprueban la sesión del lado del servidor. Las mutaciones comprueban también el origen y validan el input.
+
+## Imágenes R2
+
+Se aceptan JPEG, PNG, WebP y AVIF de hasta 5 MB. Se comprueba tamaño, MIME y firma del archivo; las claves son `courses/{uuid}.{extension}`. Las credenciales se usan exclusivamente en servidor.
+
+Al cambiar una imagen, primero se confirma su existencia en R2 y se guarda la nueva referencia en Neon. Después se intenta borrar la anterior, solo si ningún curso la comparte. Una copia del curso conserva la imagen, pero empieza como borrador, sin fechas ni compradores. Si la subida falla, se conserva la imagen anterior. Una subida abandonada sin guardar puede dejar un objeto sin referencia en el bucket; no existe un proceso automático de limpieza.
+
+## Datos de desarrollo
 
 ```bash
 npm run db:seed
 ```
 
-El seed es idempotente y fácil de retirar desde el panel o la base de datos.
+Seed idempotente con tres cursos demo y cinco compras (Ana Martínez, Carlos López y Fernanda Ruiz), con diferentes estados de pago y correo. Solo se permite en desarrollo (también en scripts locales sin `NODE_ENV` definido); se rechaza en `production` y `test`. No hay controles para crear compras ficticias en la interfaz.
 
-## Cloudflare R2
+Usa una base de desarrollo para el seed; no lo ejecutes contra una base comercial. Ninguna mutación pública permite crear compras pagadas.
 
-1. Crea un bucket y habilita una URL pública (dominio propio o `r2.dev`).
-2. Crea un token con permisos de lectura/escritura sobre ese bucket.
-3. Configura `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` y `R2_PUBLIC_URL`.
-4. Coloca el SVG oficial, sin modificarlo, en `public/logo.svg`.
+## Stripe, cuando esté disponible
 
-El upload acepta JPEG, PNG, WebP y AVIF de hasta 5 MB. Las credenciales nunca llegan al navegador.
+Configura `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` y, si se necesita en una futura integración embebida, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`. Checkout alojado no usa la llave pública en el navegador. La inicialización del SDK es lazy y no ocurre al importar módulos.
 
-## Stripe
+Endpoints conservados:
 
-1. Copia las llaves de prueba a `STRIPE_SECRET_KEY` y `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
-2. Inicia el reenvío local de eventos:
+- `POST /api/checkout`: consulta precio y contenido en Neon, verifica publicación, fecha, ventas y cupo; crea una compra pendiente y metadata `courseId`, `courseSlug`, `purchaseId`.
+- `POST /api/stripe/webhook`: verifica la firma sobre el body original y procesa eventos en una transacción idempotente. El webhook puede crear la compra si llega antes que el registro pendiente. Los eventos fallidos o expirados no revierten pagos confirmados; los reembolsos completos se conservan como tales.
+
+Configura estos eventos: `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `payment_intent.payment_failed`, `charge.refunded`.
 
 ```bash
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-3. Copia el secreto `whsec_...` mostrado por Stripe CLI a `STRIPE_WEBHOOK_SECRET`.
-4. En producción registra `https://tu-dominio.mx/api/stripe/webhook` y escucha `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `payment_intent.payment_failed` y `charge.refunded`.
+Antes de habilitar pagos reales, verifica un pago completo y reenvíos del webhook con las credenciales de Stripe. No hay reservas temporales: se revisa cupo al iniciar checkout; sesiones simultáneas aún pueden liquidarse más tarde. Los pagos recibidos se conservan para que el administrador gestione cualquier sobrecupo.
 
-Los métodos de pago se controlan desde Stripe. La aplicación nunca almacena tarjetas y siempre toma el precio desde PostgreSQL. La página de éxito no cambia el estado de una compra; solo el webhook firmado puede hacerlo.
-
-## Desarrollo y validación
+## Verificación
 
 ```bash
 npm run dev
 npm run lint
 npm run typecheck
+npm run test
 npm run build
 ```
 
-Visita `http://localhost:3000`. La administración está en `/admin/login` y utiliza `ADMIN_USER` y `ADMIN_PASSWORD`.
+Las pruebas unitarias cubren centavos, validaciones, zonas horarias, disponibilidad, Gmail, WhatsApp, imágenes, CSV y parámetros de filtros.
 
-## Flujo de administración
+Después del build se pueden ejecutar las pruebas de integración contra Neon de desarrollo. En PowerShell:
 
-1. Inicia sesión.
-2. Crea un curso, completa precio y detalles y sube la imagen.
-3. Activa ventas y cambia el estado a “Publicado”.
-4. Revisa compras en `/admin/compras`.
-5. Envía manualmente la información del curso y confirma el checkbox “Correo enviado”.
-6. Agrega notas internas o exporta el CSV cuando sea necesario.
+```powershell
+$env:RUN_DATABASE_TESTS = '1'
+npm.cmd run test:integration
+```
 
-## Flujo de compra
+Inician un servidor local con credenciales admin efímeras y Stripe vacío, comprueban los flujos HTTP/Neon y eliminan únicamente sus propios datos temporales al terminar. Un segundo servidor verifica eventos de webhook con firmas generadas localmente, sin llamadas ni cobros de Stripe. No cambian las credenciales del proyecto.
 
-La persona abre un curso publicado, acepta términos, va a Stripe Checkout y paga. El endpoint de checkout valida publicación, disponibilidad y precio en la base. El webhook firmado actualiza la compra de forma idempotente. El administrador ve el pago y da seguimiento manual por correo.
+## Despliegue
 
-## Antes de producción
-
-- Reemplazar los campos entre corchetes de `src/content/legal.ts` y obtener revisión jurídica del aviso de privacidad, términos, procedimiento ARCO, facturación, cancelaciones y reembolsos.
-- Sustituir/eliminar el contenido del seed y agregar el logo oficial en `public/logo.svg`.
-- Confirmar correo de contacto, horarios, zona horaria, cupos y textos de cada curso.
-- Probar un pago completo y un webhook reenviado en modo de prueba de Stripe.
-- Configurar copias de seguridad y retención en Neon/R2.
-- Proteger `/admin` adicionalmente con rate limiting o WAF del proveedor de hosting. La app ya aplica espera y límite básico en memoria, pero un control perimetral es más sólido en producción.
-- Usar HTTPS, variables secretas del proveedor y una contraseña administrativa única y robusta.
-
-## Deployment
-
-Despliega en un proveedor compatible con Next.js 16 y Node.js. Configura todas las variables de `.env.example`, aplica `npm run db:migrate` antes de recibir tráfico, define `NEXT_PUBLIC_SITE_URL` con el dominio final y registra el webhook de producción en Stripe. No ejecutes el seed salvo que quieras contenido de demostración.
+Usa un proveedor compatible con Next.js 16 y Node.js. Aplica `npm run db:migrate` antes de recibir tráfico. Stripe puede permanecer vacío. Los textos públicos y el logo existente se conservan. Los campos comerciales pendientes de `src/content/legal.ts` deben completarse por el propietario antes de aceptar pagos reales.

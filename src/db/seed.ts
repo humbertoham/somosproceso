@@ -1,4 +1,8 @@
-import { courses } from "./schema";
+import "./load-env";
+
+import { inArray } from "drizzle-orm";
+
+import { courses, purchases } from "./schema";
 import { closeDb, getDb } from "./index";
 
 const demoCourses: Array<typeof courses.$inferInsert> = [
@@ -11,7 +15,7 @@ const demoCourses: Array<typeof courses.$inferInsert> = [
     priceCents: 85000,
     status: "published",
     modality: "online",
-    startDate: new Date("2027-02-20T17:00:00-06:00"),
+    startDate: new Date("2027-02-20T11:00:00-06:00"),
     timeText: "11:00 a 14:00 h",
     durationText: "3 horas",
     salesOpen: true,
@@ -20,7 +24,7 @@ const demoCourses: Array<typeof courses.$inferInsert> = [
     learningOutcomes: ["Identificar emociones con más precisión", "Reconocer patrones de respuesta", "Practicar una pausa consciente"],
     includes: ["Sesión en vivo por Zoom", "Material digital de apoyo"],
     additionalInfo: "Contenido ficticio para probar la aplicación. Elimínalo antes de producción.",
-    capacity: 30,
+    capacity: 20,
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
@@ -31,7 +35,7 @@ const demoCourses: Array<typeof courses.$inferInsert> = [
     priceCents: 120000,
     status: "published",
     modality: "online",
-    startDate: new Date("2027-03-13T16:00:00-06:00"),
+    startDate: new Date("2027-03-13T10:00:00-06:00"),
     timeText: "10:00 a 13:00 h",
     durationText: "Dos sesiones de 3 horas",
     salesOpen: true,
@@ -56,9 +60,25 @@ const demoCourses: Array<typeof courses.$inferInsert> = [
 ];
 
 async function main() {
-  await getDb().insert(courses).values(demoCourses).onConflictDoNothing({ target: courses.slug });
+  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") throw new Error("El seed de demostración solo está permitido en development.");
+  const db = getDb();
+  await db.transaction(async (tx) => {
+    await tx.insert(courses).values(demoCourses).onConflictDoNothing();
+    const existing = await tx.select({ id: courses.id, slug: courses.slug }).from(courses).where(inArray(courses.slug, demoCourses.map((course) => course.slug)));
+    const first = existing.find((course) => course.slug === demoCourses[0].slug);
+    const second = existing.find((course) => course.slug === demoCourses[1].slug);
+    if (!first || !second) throw new Error("No fue posible encontrar los cursos demo.");
+    const now = new Date();
+    await tx.insert(purchases).values([
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", courseId: first.id, buyerName: "Ana Martínez", buyerEmail: "ana@example.com", buyerPhone: "+52 81 1234 5678", amountCents: 85000, currency: "MXN", paymentStatus: "paid", paidAt: now, emailSent: false, source: "manual", internalReference: "DEMO-ANA" },
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2", courseId: first.id, buyerName: "Carlos López", buyerEmail: "carlos@example.com", buyerPhone: "81 2345 6789", amountCents: 85000, currency: "MXN", paymentStatus: "paid", paidAt: now, emailSent: true, emailSentAt: now, adminNotes: "Ejemplo: ya recibió la información del curso.", source: "manual", internalReference: "DEMO-CARLOS" },
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3", courseId: second.id, buyerName: "Fernanda Ruiz", buyerEmail: "fernanda@example.com", amountCents: 120000, currency: "MXN", paymentStatus: "pending", source: "manual", internalReference: "DEMO-FERNANDA" },
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4", courseId: second.id, buyerName: "Ana Martínez", buyerEmail: "ana@example.com", amountCents: 120000, currency: "MXN", paymentStatus: "failed", source: "manual", internalReference: "DEMO-FALLIDO" },
+      { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5", courseId: second.id, buyerName: "Carlos López", buyerEmail: "carlos@example.com", amountCents: 120000, currency: "MXN", paymentStatus: "refunded", paidAt: now, source: "manual", internalReference: "DEMO-REEMBOLSO" },
+    ]).onConflictDoNothing();
+  });
   await closeDb();
-  console.log("Seed listo: 3 cursos de demostración.");
+  console.log("Seed listo: 3 cursos y 5 compras de demostración. Solo para desarrollo.");
 }
 
 main().catch(async (error: unknown) => {

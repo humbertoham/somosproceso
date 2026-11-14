@@ -338,7 +338,7 @@ h1, h2 { font-family: var(--font-editorial), serif; font-weight: 450; letter-spa
 .search-field input { padding-left: 39px; }
 .filter-button { background: var(--brand-dark); }
 .purchase-filters > a { color: var(--brand-green); font-size: 12px; font-weight: 750; }
-.purchase-table-wrap { overflow-x: auto; }
+.purchase-table-wrap { min-width: 0; }
 .purchase-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .purchase-table th { padding: 13px 14px; background: #f7f6f3; color: var(--muted); text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .purchase-table td { padding: 16px 14px; border-top: 1px solid #e8e6e1; vertical-align: top; }
@@ -470,4 +470,63 @@ h1, h2 { font-family: var(--font-editorial), serif; font-weight: 450; letter-spa
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* Administración: tablas en escritorio y tarjetas legibles en móvil. */
+fieldset.course-form { border: 0; padding: 0; margin: 0; min-width: 0; }
+.course-form input, .course-form textarea, .course-form select { min-width: 0; }
+.field-hint { color: var(--muted); font-size: 11px; }
+.course-edit-actions { margin-bottom: 24px; }
+.course-action-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.course-action-buttons a, .course-action-buttons button { display: inline-flex; align-items: center; min-height: 36px; border: 0; padding: 2px 0; background: transparent; color: var(--brand-green); font-size: 12px; font-weight: 750; text-align: left; }
+.course-action-buttons .danger-action { color: var(--danger); }
+.course-actions > small { display: block; margin-top: 8px; }
+.course-stats strong { font-size: clamp(18px, 2vw, 26px); overflow-wrap: anywhere; }
+.admin-courses-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.admin-courses-table th { padding: 14px; text-align: left; background: #f7f6f3; color: var(--muted); font-size: 10px; text-transform: uppercase; }
+.admin-courses-table td { padding: 16px 14px; border-top: 1px solid #e8e6e1; vertical-align: top; overflow-wrap: anywhere; }
+.admin-courses-table th:first-child { width: 25%; }
+.admin-courses-table th:nth-child(2) { width: 17%; }
+.admin-courses-table th:last-child { width: 21%; }
+.admin-courses-table th:nth-child(4), .admin-courses-table th:nth-child(5), .admin-courses-table th:nth-child(6) { width: 8%; }
+.admin-courses-table small { display: block; margin-top: 7px; color: var(--muted); line-height: 1.5; }
+.admin-courses-table .status-badge { white-space: normal; }
+.purchase-table { table-layout: fixed; }
+.purchase-table td, .purchase-table th { overflow-wrap: anywhere; }
+.purchase-table th { white-space: normal; }
+.purchase-table td:nth-child(2), .purchase-table td:nth-child(3) { min-width: 0; }
+.purchase-table th:nth-child(2) { width: 20%; }
+.purchase-table th:last-child { width: 17%; }
+.purchase-table td:last-child { position: static; }
+.purchase-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.purchase-actions .admin-secondary-button { min-height: 34px; padding: 4px 8px; font-size: 11px; }
+.purchase-actions .small-admin-button { padding: 5px 9px; font-size: 11px; }
+.purchase-table .note-preview { white-space: pre-line; font-size: 11px; }
+.notes-editor { display: grid !important; gap: 8px; }
+.notes-editor textarea { width: 100%; }
+.recent-list article { flex-wrap: wrap; }
+@media (max-width: 1200px) {
+  .admin-courses-table, .admin-courses-table tbody, .admin-courses-table tr, .admin-courses-table td { display: block; }
+  .admin-courses-table thead { display: none; }
+  .admin-courses-table tr { padding: 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; border-bottom: 1px solid #e8e6e1; }
+  .admin-courses-table td { padding: 0; border: 0; }
+  .admin-courses-table td:first-child, .admin-courses-table td:last-child { grid-column: 1 / -1; }
+  .admin-courses-table td::before { content: attr(data-label); display: block; margin-bottom: 7px; color: var(--muted); font-size: 10px; text-transform: uppercase; }
+}
+@media (max-width: 1000px) {
+  .purchase-table, .purchase-table tbody, .purchase-table tr, .purchase-table td { display: block; }
+  .purchase-table thead { display: none; }
+  .purchase-table tbody { display: grid; gap: 14px; }
+  .purchase-table tr:not(.purchase-detail-row) { position: relative; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; border: 1px solid #e8e6e1; border-radius: 10px; }
+  .purchase-table td { border: 0; padding: 0; min-width: 0; }
+  .purchase-table td::before { content: attr(data-label); display: block; margin-bottom: 6px; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .purchase-table td:nth-child(2), .purchase-table td:nth-child(3), .purchase-table td:last-child { grid-column: 1 / -1; }
+  .purchase-actions { flex-direction: row; flex-wrap: wrap; }
+  .purchase-detail-row td { padding: 0 16px 20px; }
+  .purchase-detail-row td > div { grid-template-columns: 1fr; gap: 18px; }
+}
+@media (max-width: 520px) {
+  .admin-courses-table tr, .purchase-table tr:not(.purchase-detail-row) { grid-template-columns: 1fr; }
+  .course-form .admin-card { padding: 22px; }
+  .admin-header > a { width: 100%; }
 }

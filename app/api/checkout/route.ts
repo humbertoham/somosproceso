@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getDb } from "@/db";
 import { courses, purchases } from "@/db/schema";
-import { getSiteUrl } from "@/lib/env";
+import { getSiteUrl, hasStripe } from "@/lib/env";
 import { getStripe } from "@/lib/stripe";
 import { courseAvailability } from "@/lib/utils";
 import { checkoutSchema } from "@/lib/validations/checkout";
@@ -11,6 +11,7 @@ import { checkoutSchema } from "@/lib/validations/checkout";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (!hasStripe()) return NextResponse.json({ available: false, message: "Los pagos en línea estarán disponibles próximamente." });
   try {
     const input = checkoutSchema.parse(await request.json());
     const db = getDb();
@@ -54,8 +55,9 @@ export async function POST(request: Request) {
         amountCents: course.priceCents,
         currency: course.currency,
         paymentStatus: "pending",
+        source: "stripe",
         termsAcceptedAt: new Date(),
-      });
+      }).onConflictDoNothing({ target: purchases.stripeCheckoutSessionId });
     } catch (error) {
       await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
       throw error;

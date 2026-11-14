@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 
@@ -9,17 +9,22 @@ export function CheckoutForm({ courseId, disabled }: { courseId: string; disable
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const processing = useRef(false);
 
   async function checkout() {
-    setError(""); setLoading(true);
+    if (processing.current || disabled || !accepted) return;
+    processing.current = true;
+    setError(""); setMessage(""); setLoading(true);
     try {
       const response = await fetch("/api/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ courseId, termsAccepted: accepted }) });
-      const data = await response.json() as { url?: string; error?: string };
+      const data = await response.json() as { url?: string; error?: string; available?: boolean; message?: string };
+      if (response.ok && data.available === false) { setMessage(data.message ?? "Los pagos en línea estarán disponibles próximamente."); return; }
       if (!response.ok || !data.url) throw new Error(data.error ?? "No pudimos iniciar el pago.");
       window.location.assign(data.url);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No pudimos iniciar el pago."); setLoading(false);
-    }
+      setError(cause instanceof Error ? cause.message : "No pudimos iniciar el pago.");
+    } finally { processing.current = false; setLoading(false); }
   }
 
   return <div className="checkout-form">
@@ -28,5 +33,6 @@ export function CheckoutForm({ courseId, disabled }: { courseId: string; disable
     </label>
     <Button type="button" disabled={disabled || !accepted || loading} onClick={checkout}>{loading ? "Abriendo pago…" : "Comprar curso"}<span aria-hidden="true">↗</span></Button>
     {error && <p className="form-error" role="alert">{error}</p>}
+    {message && <p className="session-notice" role="status">{message}</p>}
   </div>;
 }

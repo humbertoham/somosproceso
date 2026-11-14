@@ -47,7 +47,7 @@ export default async function CoursePage({ params }: Props) {
       <div className="detail-image">{course.imageUrl ? <Image src={course.imageUrl} alt={`Imagen del curso ${course.title}`} fill priority sizes="(max-width: 900px) 100vw, 50vw" /> : <span>Una pausa<br /><em>para crecer.</em></span>}</div>
       <div className="detail-summary"><StatusBadge status={availability.key} label={availability.label} /><p className="eyebrow">Curso · {modalityLabel(course.modality)}</p><h1>{course.title}</h1><p className="lead">{course.shortDescription}</p>
         <div className="detail-facts">
-          {course.startDate && <span><CalendarDays /> <span><small>Fecha</small>{formatDate(course.startDate)}</span></span>}
+          {course.startDate && <span><CalendarDays /> <span><small>Fecha</small>{formatDate(course.startDate, false, course.timezone)}</span></span>}
           {course.timeText && <span><Clock3 /> <span><small>Horario</small>{course.timeText}</span></span>}
           <span><Globe2 /> <span><small>Zona horaria</small>{course.timezone}</span></span>
           <span><Monitor /> <span><small>Modalidad</small>{modalityLabel(course.modality)}</span></span>

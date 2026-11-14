@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createSession } from "@/lib/auth";
 import { getAdminEnv } from "@/lib/env";
+import { checkOrigin } from "@/lib/admin-api";
 
 export const runtime = "nodejs";
 
@@ -17,8 +18,11 @@ function sameValue(value: string, expected: string) {
 }
 
 export async function POST(request: Request) {
+  const denied = checkOrigin(request);
+  if (denied) return denied;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const now = Date.now();
+  for (const [key, entry] of attempts) if (entry.resetAt <= now) attempts.delete(key);
   const state = attempts.get(ip);
   if (state && state.resetAt > now && state.count >= 8) {
     await pause(); return NextResponse.json({ error: "Demasiados intentos. Espera unos minutos." }, { status: 429 });
